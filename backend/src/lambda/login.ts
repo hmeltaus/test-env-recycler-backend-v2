@@ -1,12 +1,9 @@
 import {
-  GetSecretValueCommand,
-  SecretsManager,
-} from "@aws-sdk/client-secrets-manager"
+  AuthFlowType,
+  CognitoIdentityProvider,
+  InitiateAuthCommand,
+} from "@aws-sdk/client-cognito-identity-provider"
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda"
-import * as bcrypt from "bcryptjs"
-import * as jwt from "jsonwebtoken"
-
-import { UserDb } from "../db/user-db"
 
 interface LoginData {
   username: string
@@ -31,6 +28,8 @@ const unauthorizedResponse = {
   }),
 }
 
+const cognito = new CognitoIdentityProvider({ region: process.env.AWS_REGION })
+
 export const handler = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
@@ -45,36 +44,25 @@ export const handler = async (
     return unauthorizedResponse
   }
 
-  const user = await UserDb.get(username)
-  if (!user) {
+  try {
+    const { AuthenticationResult } = await cognito.send(
+      new InitiateAuthCommand({
+        AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
+        AuthParameters: {
+          USERNAME: username,
+          PASSWORD: password,
+        },
+        ClientId: process.env.USER_POOL_CLIENT_ID,
+      }),
+    )
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        token: AuthenticationResult?.AccessToken,
+      }),
+    }
+  } catch (e) {
     return unauthorizedResponse
-  }
-
-  if (!(await bcrypt.compare(password, user.password))) {
-    return unauthorizedResponse
-  }
-
-  const client = new SecretsManager({ region: `${process.env.AWS_REGION}` })
-  const { SecretString } = await client.send(
-    new GetSecretValueCommand({ SecretId: "jwt-secret" }),
-  )
-
-  const token = jwt.sign(
-    {
-      username,
-    },
-    SecretString!,
-    {
-      issuer: "test-env-recycler",
-      expiresIn: "3h",
-    },
-  )
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify({
-      token: token,
-      username: user.username,
-    }),
   }
 }
