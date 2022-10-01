@@ -13,10 +13,12 @@ export class IamRoleCleaner extends AwsCleaner<IAM, Role> {
   protected getResourcesToClean = async (client: IAM): Promise<Role[]> =>
     this.paginate(
       paginateListRoles({ client }, {}),
-      (response) => response.Roles!,
+      (response) => response.Roles,
     ).then((roles) =>
       roles.filter((role) =>
-        role.Tags!.some((t) => t.Key === "test-resource" && t.Value === "true"),
+        (role.Tags ?? []).some(
+          (t) => t.Key === "test-resource" && t.Value === "true",
+        ),
       ),
     )
 

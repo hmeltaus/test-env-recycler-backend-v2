@@ -1,5 +1,4 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda"
-import { v4 } from "uuid"
 import { accountsDb } from "../db/accounts-db"
 import { Reservation } from "../db/model"
 import { reservationsDb } from "../db/reservations-db"
@@ -8,6 +7,7 @@ import { queues } from "../queue/sqs"
 export const removeReservation = async (
   id: string,
 ): Promise<Reservation | undefined> => {
+  console.log(`Remove reservation ${id}`)
   const reservation = await reservationsDb.get(id)
 
   if (!reservation) {
@@ -18,15 +18,9 @@ export const removeReservation = async (
   await reservationsDb.remove(id)
 
   const accounts = await accountsDb.listByReservation(id)
+  console.log(`Reservation ${id} has ${accounts.length} accounts`)
   await Promise.all(
-    accounts.map((account) =>
-      accountsDb.update({
-        ...account,
-        reservationId: undefined,
-        status: "dirty",
-        version: v4(),
-      }),
-    ),
+    accounts.map((account) => accountsDb.markAccountAsDirty(account.id)),
   )
 
   await Promise.all(
@@ -51,7 +45,7 @@ export const handler = async (
     }
   }
 
-  const reservation = removeReservation(id)
+  const reservation = await removeReservation(id)
   if (!reservation) {
     return {
       body: JSON.stringify({ message: "Not found" }),

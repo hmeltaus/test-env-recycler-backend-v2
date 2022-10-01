@@ -35,12 +35,14 @@ export const handler = async (
 ): Promise<APIGatewayProxyResultV2> => {
   const data = parseBody(event.body)
   if (!data) {
+    console.log("Failed to parse request body")
     return unauthorizedResponse
   }
 
   const { username, password } = data
 
   if (!username || !password) {
+    console.log("Username or password not provided")
     return unauthorizedResponse
   }
 
@@ -56,6 +58,8 @@ export const handler = async (
       }),
     )
 
+    console.log("Login succeeded")
+
     return {
       statusCode: 200,
       body: JSON.stringify({
@@ -63,6 +67,7 @@ export const handler = async (
       }),
     }
   } catch (e) {
+    console.log("Login failed")
     return unauthorizedResponse
   }
 }

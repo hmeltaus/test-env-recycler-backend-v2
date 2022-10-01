@@ -5,6 +5,7 @@ import {
   QueryCommand,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb"
+import { v4 } from "uuid"
 import { ACCOUNTS_TABLE_NAME, dynamoDb } from "./common"
 import { Account, AccountStatus } from "./model"
 
@@ -88,6 +89,42 @@ const update = async (account: Account): Promise<void> => {
   )
 }
 
+const markAccountAsReady = async (id: string): Promise<void> => {
+  await update({
+    id,
+    status: "ready",
+    version: v4(),
+  })
+}
+
+const markAccountAsDirty = async (id: string): Promise<void> => {
+  await update({
+    id,
+    status: "dirty",
+    version: v4(),
+  })
+}
+
+const markAccountAsInCleaning = async (id: string): Promise<void> => {
+  await update({
+    id,
+    status: "in-cleaning",
+    version: v4(),
+  })
+}
+
+const markAccountAsReserved = async (
+  id: string,
+  reservationId: string,
+): Promise<void> => {
+  await update({
+    id,
+    reservationId,
+    status: "reserved",
+    version: v4(),
+  })
+}
+
 const get = async (id: string): Promise<Account | undefined> => {
   const { Item } = await dynamoDb.send(
     new GetCommand({
@@ -108,5 +145,8 @@ export const accountsDb = {
   listByReservation,
   listByStatus,
   reserveAccount,
-  update,
+  markAccountAsDirty,
+  markAccountAsReady,
+  markAccountAsReserved,
+  markAccountAsInCleaning,
 }

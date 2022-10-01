@@ -41,11 +41,7 @@ const processRecord = async (record: SQSRecord): Promise<boolean> => {
 
       for (const account of reservedAccounts) {
         console.log(`Mark account ${account.id} dirty`)
-        await accountsDb.update({
-          id: account.id,
-          status: "dirty",
-          version: v4(),
-        })
+        await accountsDb.markAccountAsDirty(account.id)
       }
 
       return true

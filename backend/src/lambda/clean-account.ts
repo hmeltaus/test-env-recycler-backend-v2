@@ -27,10 +27,7 @@ const processRecord = async (record: SQSRecord): Promise<boolean> => {
     }
 
     console.log(`Account ${item.accountId} found`)
-    await accountsDb.update({
-      ...account,
-      status: "in-cleaning",
-    })
+    await accountsDb.markAccountAsInCleaning(account.id)
 
     const cleaners = await registry.getCleaners()
 
@@ -44,10 +41,7 @@ const processRecord = async (record: SQSRecord): Promise<boolean> => {
       await cleaner.clean(account)
     }
 
-    await accountsDb.update({
-      ...account,
-      status: "ready",
-    })
+    await accountsDb.markAccountAsReady(account.id)
 
     console.log(`Account ${item.accountId} cleaned`)
 

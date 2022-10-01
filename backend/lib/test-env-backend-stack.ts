@@ -29,7 +29,7 @@ export class TestEnvBackendStack extends cdk.Stack {
           statements: [
             new iam.PolicyStatement({
               actions: ["sts:AssumeRole"],
-              resources: ["arn:aws:iam::*:role/OrganizationAccountAccessRole"],
+              resources: ["*"],
               effect: iam.Effect.ALLOW,
             }),
           ],
@@ -148,6 +148,9 @@ export class TestEnvBackendStack extends cdk.Stack {
           effect: iam.Effect.ALLOW,
         }),
       ],
+      environment: {
+        CLEAN_ACCOUNTS_QUEUE_URL: cleanAccountsQueue.queueUrl,
+      },
     })
 
     const loginFn = new NodejsFunction(this, "login", {
@@ -160,6 +163,13 @@ export class TestEnvBackendStack extends cdk.Stack {
       environment: {
         USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
       },
+      initialPolicy: [
+        new iam.PolicyStatement({
+          actions: ["cognito-idp:InitiateAuth"],
+          resources: ["*"],
+          effect: iam.Effect.ALLOW,
+        }),
+      ],
     })
 
     const reserveAccountsFn = new NodejsFunction(this, "reserve-accounts", {
@@ -192,6 +202,13 @@ export class TestEnvBackendStack extends cdk.Stack {
       environment: {
         EXECUTION_ROLE_NAME: "OrganizationAccountAccessRole",
       },
+      initialPolicy: [
+        new iam.PolicyStatement({
+          actions: ["sts:AssumeRole"],
+          resources: ["arn:aws:iam::*:role/OrganizationAccountAccessRole"],
+          effect: iam.Effect.ALLOW,
+        }),
+      ],
       events: [new SqsEventSource(cleanAccountsQueue, { enabled: true })],
     })
 
@@ -208,6 +225,9 @@ export class TestEnvBackendStack extends cdk.Stack {
           __dirname,
           `/../src/lambda/remove-expired-reservations.ts`,
         ),
+        environment: {
+          CLEAN_ACCOUNTS_QUEUE_URL: cleanAccountsQueue.queueUrl,
+        },
         initialPolicy: [
           new iam.PolicyStatement({
             actions: ["dynamodb:Query"],
@@ -215,6 +235,22 @@ export class TestEnvBackendStack extends cdk.Stack {
             effect: iam.Effect.ALLOW,
           }),
         ],
+      },
+    )
+
+    const handleOrphanAccountsFn = new NodejsFunction(
+      this,
+      "handle-orphan-accounts",
+      {
+        functionName: "handle-orphan-accounts",
+        memorySize: 512,
+        timeout: cdk.Duration.seconds(30),
+        runtime: lambda.Runtime.NODEJS_16_X,
+        handler: "handler",
+        entry: path.join(__dirname, `/../src/lambda/handle-orphan-accounts.ts`),
+        environment: {
+          CLEAN_ACCOUNTS_QUEUE_URL: cleanAccountsQueue.queueUrl,
+        },
       },
     )
 
@@ -255,7 +291,7 @@ export class TestEnvBackendStack extends cdk.Stack {
       authorizer,
       integration: new HttpLambdaIntegration(
         "remove-reservation-integration",
-        getReservationFn,
+        removeReservationFn,
       ),
     })
 
@@ -264,12 +300,14 @@ export class TestEnvBackendStack extends cdk.Stack {
     reservationsTable.grantReadWriteData(removeReservationFn)
     reservationsTable.grantReadWriteData(removeExpiredReservationsFn)
     reservationsTable.grantReadData(getReservationFn)
+    reservationsTable.grantReadData(handleOrphanAccountsFn)
 
     accountsTable.grantReadWriteData(removeReservationFn)
     accountsTable.grantReadWriteData(createReservationFn)
     accountsTable.grantReadWriteData(reserveAccountsFn)
     accountsTable.grantReadWriteData(removeExpiredReservationsFn)
     accountsTable.grantReadWriteData(cleanAccountFn)
+    accountsTable.grantReadWriteData(handleOrphanAccountsFn)
     accountsTable.grantReadData(getReservationFn)
 
     reserveAccountsQueue.grantSendMessages(createReservationFn)
@@ -277,10 +315,11 @@ export class TestEnvBackendStack extends cdk.Stack {
     reserveAccountsQueue.grantSendMessages(reserveAccountsFn)
     cleanAccountsQueue.grantSendMessages(removeExpiredReservationsFn)
     cleanAccountsQueue.grantSendMessages(removeReservationFn)
+    cleanAccountsQueue.grantSendMessages(handleOrphanAccountsFn)
 
     executionRole.grantAssumeRole(getReservationFn.grantPrincipal)
 
-    const rule = new events.Rule(
+    const removeExpiredReservationsRule = new events.Rule(
       this,
       "remove-expired-reservations-schedule-rule",
       {
@@ -288,7 +327,21 @@ export class TestEnvBackendStack extends cdk.Stack {
       },
     )
 
-    rule.addTarget(new targets.LambdaFunction(removeExpiredReservationsFn))
+    removeExpiredReservationsRule.addTarget(
+      new targets.LambdaFunction(removeExpiredReservationsFn),
+    )
+
+    const handleOrphanAccountsRule = new events.Rule(
+      this,
+      "handle-orphan-accounts-schedule-rule",
+      {
+        schedule: events.Schedule.rate(cdk.Duration.minutes(20)),
+      },
+    )
+
+    handleOrphanAccountsRule.addTarget(
+      new targets.LambdaFunction(handleOrphanAccountsFn),
+    )
 
     new cdk.CfnOutput(this, "region", { value: cdk.Stack.of(this).region })
     new cdk.CfnOutput(this, "userPoolId", { value: userPool.userPoolId })
