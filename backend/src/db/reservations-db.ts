@@ -23,7 +23,7 @@ const get = async (id: string): Promise<Reservation | undefined> => {
   return {
     id: Item.id!,
     name: Item.name!,
-    timestamp: Item.timestamp!,
+    timestamp: parseInt(Item.timestamp!, 10),
     accountCount: Item.accountCount!,
   }
 }
@@ -71,7 +71,7 @@ const list = async (): Promise<ReadonlyArray<Reservation>> => {
   return Items.map((item) => ({
     id: item.id!,
     name: item.name!,
-    timestamp: item.timestamp!,
+    timestamp: parseInt(item.timestamp!, 10),
     accountCount: item.accountCount!,
   }))
 }

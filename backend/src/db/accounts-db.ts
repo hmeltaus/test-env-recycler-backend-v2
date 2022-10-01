@@ -14,6 +14,7 @@ const convertAccount = (item: any): Account => ({
   reservationId: item.reservationId,
   status: item.status,
   version: item.version,
+  updated: item.updated ? parseInt(item.updated, 10) : 1,
 })
 
 const listByReservation = async (
@@ -31,9 +32,7 @@ const listByReservation = async (
   return (Items ?? []).map(convertAccount)
 }
 
-const listByStatus = async (
-  status: AccountStatus,
-): Promise<ReadonlyArray<Account>> => {
+const list = async (): Promise<ReadonlyArray<Account>> => {
   const pages = paginateScan(
     { client: dynamoDb },
     { TableName: ACCOUNTS_TABLE_NAME, ConsistentRead: true },
@@ -44,6 +43,13 @@ const listByStatus = async (
     accounts.push(...(page.Items ?? []).map(convertAccount))
   }
 
+  return accounts
+}
+
+const listByStatus = async (
+  status: AccountStatus,
+): Promise<ReadonlyArray<Account>> => {
+  const accounts = await list()
   return accounts.filter((a) => a.status === status)
 }
 
@@ -53,31 +59,38 @@ const reserveAccount = async (
   version: string,
   newVersion: string,
 ): Promise<boolean> => {
-  const { Attributes } = await dynamoDb.send(
-    new UpdateCommand({
-      TableName: ACCOUNTS_TABLE_NAME,
-      ReturnValues: "UPDATED_NEW",
-      Key: { id: accountId },
-      UpdateExpression: "SET #a = :a, #b = :b, #c = :c",
-      ConditionExpression: "#d = :d AND #e = :e",
-      ExpressionAttributeNames: {
-        "#a": "reservationId",
-        "#b": "status",
-        "#c": "version",
-        "#d": "status",
-        "#e": "version",
-      },
-      ExpressionAttributeValues: {
-        ":a": reservationId,
-        ":b": "reserved",
-        ":c": newVersion,
-        ":d": "ready",
-        ":e": version,
-      },
-    }),
-  )
+  try {
+    const { Attributes } = await dynamoDb.send(
+      new UpdateCommand({
+        TableName: ACCOUNTS_TABLE_NAME,
+        ReturnValues: "UPDATED_NEW",
+        Key: { id: accountId },
+        UpdateExpression: "SET #a = :a, #b = :b, #c = :c, #f = :f",
+        ConditionExpression: "#d = :d AND #e = :e",
+        ExpressionAttributeNames: {
+          "#a": "reservationId",
+          "#b": "status",
+          "#c": "version",
+          "#d": "status",
+          "#e": "version",
+          "#f": "updated",
+        },
+        ExpressionAttributeValues: {
+          ":a": reservationId,
+          ":b": "reserved",
+          ":c": newVersion,
+          ":d": "ready",
+          ":e": version,
+          ":f": Date.now(),
+        },
+      }),
+    )
 
-  return Attributes?.version !== undefined
+    return Attributes?.version !== undefined
+  } catch (e: any) {
+    console.log(`An error occurred while reserving account ${accountId}`, e)
+    return false
+  }
 }
 
 const update = async (account: Account): Promise<void> => {
@@ -94,6 +107,7 @@ const markAccountAsReady = async (id: string): Promise<void> => {
     id,
     status: "ready",
     version: v4(),
+    updated: Date.now(),
   })
 }
 
@@ -102,6 +116,7 @@ const markAccountAsDirty = async (id: string): Promise<void> => {
     id,
     status: "dirty",
     version: v4(),
+    updated: Date.now(),
   })
 }
 
@@ -110,6 +125,7 @@ const markAccountAsInCleaning = async (id: string): Promise<void> => {
     id,
     status: "in-cleaning",
     version: v4(),
+    updated: Date.now(),
   })
 }
 
@@ -122,6 +138,7 @@ const markAccountAsReserved = async (
     reservationId,
     status: "reserved",
     version: v4(),
+    updated: Date.now(),
   })
 }
 
@@ -142,6 +159,7 @@ const get = async (id: string): Promise<Account | undefined> => {
 
 export const accountsDb = {
   get,
+  list,
   listByReservation,
   listByStatus,
   reserveAccount,

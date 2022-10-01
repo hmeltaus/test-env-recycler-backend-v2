@@ -49,7 +49,7 @@ export const handler = async (
 
   const accounts = await accountsDb.listByReservation(reservation.id)
   const reservedAccounts = accounts.filter((a) => a.status === "reserved")
-  const ready = reservedAccounts.length === reservation.accountCount
+  const ready = reservedAccounts.length >= reservation.accountCount
   const credentials = await getCredentials(ready)
 
   const response: ReservationResponse = {

@@ -12,4 +12,5 @@ export interface Account {
   status: AccountStatus
   reservationId?: string
   version: string
+  updated: number
 }

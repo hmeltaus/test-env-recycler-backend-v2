@@ -2,7 +2,7 @@ import { ScheduledHandler } from "aws-lambda"
 import { reservationsDb } from "../db/reservations-db"
 import { removeReservation } from "./remove-reservation"
 
-const reservationMaxAgeInMillis = 1000 * 60 * 20 // 20 minutes
+const reservationMaxAgeInMillis = 1000 * 60 * 30 // 30 minutes
 
 export const handler: ScheduledHandler = async (): Promise<void> => {
   const now = Date.now()

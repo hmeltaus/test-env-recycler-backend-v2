@@ -209,7 +209,9 @@ export class TestEnvBackendStack extends cdk.Stack {
           effect: iam.Effect.ALLOW,
         }),
       ],
-      events: [new SqsEventSource(cleanAccountsQueue, { enabled: true })],
+      events: [
+        new SqsEventSource(cleanAccountsQueue, { enabled: true, batchSize: 1 }),
+      ],
     })
 
     const removeExpiredReservationsFn = new NodejsFunction(
@@ -235,6 +237,22 @@ export class TestEnvBackendStack extends cdk.Stack {
             effect: iam.Effect.ALLOW,
           }),
         ],
+      },
+    )
+
+    const cleanJammedAccountsFn = new NodejsFunction(
+      this,
+      "clean-jammed-accounts",
+      {
+        functionName: "clean-jammed-accounts",
+        memorySize: 512,
+        timeout: cdk.Duration.seconds(30),
+        runtime: lambda.Runtime.NODEJS_16_X,
+        handler: "handler",
+        entry: path.join(__dirname, `/../src/lambda/clean-jammed-accounts.ts`),
+        environment: {
+          CLEAN_ACCOUNTS_QUEUE_URL: cleanAccountsQueue.queueUrl,
+        },
       },
     )
 
@@ -308,6 +326,7 @@ export class TestEnvBackendStack extends cdk.Stack {
     accountsTable.grantReadWriteData(removeExpiredReservationsFn)
     accountsTable.grantReadWriteData(cleanAccountFn)
     accountsTable.grantReadWriteData(handleOrphanAccountsFn)
+    accountsTable.grantReadWriteData(cleanJammedAccountsFn)
     accountsTable.grantReadData(getReservationFn)
 
     reserveAccountsQueue.grantSendMessages(createReservationFn)
@@ -316,6 +335,7 @@ export class TestEnvBackendStack extends cdk.Stack {
     cleanAccountsQueue.grantSendMessages(removeExpiredReservationsFn)
     cleanAccountsQueue.grantSendMessages(removeReservationFn)
     cleanAccountsQueue.grantSendMessages(handleOrphanAccountsFn)
+    cleanAccountsQueue.grantSendMessages(cleanJammedAccountsFn)
 
     executionRole.grantAssumeRole(getReservationFn.grantPrincipal)
 
@@ -341,6 +361,18 @@ export class TestEnvBackendStack extends cdk.Stack {
 
     handleOrphanAccountsRule.addTarget(
       new targets.LambdaFunction(handleOrphanAccountsFn),
+    )
+
+    const cleanJammedAccountsRule = new events.Rule(
+      this,
+      "clean-jammed-accounts-schedule-rule",
+      {
+        schedule: events.Schedule.rate(cdk.Duration.minutes(15)),
+      },
+    )
+
+    cleanJammedAccountsRule.addTarget(
+      new targets.LambdaFunction(cleanJammedAccountsFn),
     )
 
     new cdk.CfnOutput(this, "region", { value: cdk.Stack.of(this).region })
