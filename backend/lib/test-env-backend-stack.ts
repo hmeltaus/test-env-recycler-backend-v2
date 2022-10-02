@@ -12,6 +12,7 @@ import * as iam from "aws-cdk-lib/aws-iam"
 import * as lambda from "aws-cdk-lib/aws-lambda"
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources"
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs"
+import * as logs from "aws-cdk-lib/aws-logs"
 import * as sqs from "aws-cdk-lib/aws-sqs"
 import { Construct } from "constructs"
 import * as path from "path"
@@ -117,6 +118,7 @@ export class TestEnvBackendStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_16_X,
       handler: "handler",
       entry: path.join(__dirname, `/../src/lambda/create-reservation.ts`),
+      logRetention: logs.RetentionDays.ONE_WEEK,
       environment: {
         RESERVE_ACCOUNTS_QUEUE_URL: reserveAccountsQueue.queueUrl,
       },
@@ -129,6 +131,7 @@ export class TestEnvBackendStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_16_X,
       handler: "handler",
       entry: path.join(__dirname, `/../src/lambda/get-reservation.ts`),
+      logRetention: logs.RetentionDays.ONE_WEEK,
       environment: {
         EXECUTION_ROLE_ARN: executionRole.roleArn,
       },
@@ -141,6 +144,7 @@ export class TestEnvBackendStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_16_X,
       handler: "handler",
       entry: path.join(__dirname, `/../src/lambda/remove-reservation.ts`),
+      logRetention: logs.RetentionDays.ONE_WEEK,
       initialPolicy: [
         new iam.PolicyStatement({
           actions: ["dynamodb:Query"],
@@ -160,6 +164,7 @@ export class TestEnvBackendStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_16_X,
       handler: "handler",
       entry: path.join(__dirname, `/../src/lambda/login.ts`),
+      logRetention: logs.RetentionDays.ONE_WEEK,
       environment: {
         USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
       },
@@ -179,6 +184,7 @@ export class TestEnvBackendStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_16_X,
       handler: "handler",
       entry: path.join(__dirname, `/../src/lambda/reserve-accounts.ts`),
+      logRetention: logs.RetentionDays.ONE_WEEK,
       initialPolicy: [
         new iam.PolicyStatement({
           actions: ["dynamodb:Query"],
@@ -199,6 +205,7 @@ export class TestEnvBackendStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_16_X,
       handler: "handler",
       entry: path.join(__dirname, `/../src/lambda/clean-account.ts`),
+      logRetention: logs.RetentionDays.ONE_WEEK,
       environment: {
         EXECUTION_ROLE_NAME: "OrganizationAccountAccessRole",
       },
@@ -227,6 +234,7 @@ export class TestEnvBackendStack extends cdk.Stack {
           __dirname,
           `/../src/lambda/remove-expired-reservations.ts`,
         ),
+        logRetention: logs.RetentionDays.ONE_WEEK,
         environment: {
           CLEAN_ACCOUNTS_QUEUE_URL: cleanAccountsQueue.queueUrl,
         },
@@ -250,6 +258,7 @@ export class TestEnvBackendStack extends cdk.Stack {
         runtime: lambda.Runtime.NODEJS_16_X,
         handler: "handler",
         entry: path.join(__dirname, `/../src/lambda/clean-jammed-accounts.ts`),
+        logRetention: logs.RetentionDays.ONE_WEEK,
         environment: {
           CLEAN_ACCOUNTS_QUEUE_URL: cleanAccountsQueue.queueUrl,
         },
@@ -266,6 +275,7 @@ export class TestEnvBackendStack extends cdk.Stack {
         runtime: lambda.Runtime.NODEJS_16_X,
         handler: "handler",
         entry: path.join(__dirname, `/../src/lambda/handle-orphan-accounts.ts`),
+        logRetention: logs.RetentionDays.ONE_WEEK,
         environment: {
           CLEAN_ACCOUNTS_QUEUE_URL: cleanAccountsQueue.queueUrl,
         },
