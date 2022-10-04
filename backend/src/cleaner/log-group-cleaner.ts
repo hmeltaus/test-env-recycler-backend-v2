@@ -17,6 +17,7 @@ export class LogGroupCleaner extends AwsCleaner<CloudWatchLogs, LogGroup> {
 
   protected getResourcesToClean = async (
     client: CloudWatchLogs,
+    region: string,
   ): Promise<LogGroup[]> =>
     this.paginate(
       paginateDescribeLogGroups({ client }, {}),

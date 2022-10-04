@@ -16,6 +16,7 @@ export class SecurityGroupCleaner extends AwsCleaner<EC2, SecurityGroup> {
 
   protected getResourcesToClean = async (
     client: EC2,
+    region: string,
   ): Promise<SecurityGroup[]> =>
     this.paginate(
       paginateDescribeSecurityGroups({ client }, {}),

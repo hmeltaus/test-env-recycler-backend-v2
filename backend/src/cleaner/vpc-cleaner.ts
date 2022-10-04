@@ -15,7 +15,10 @@ export class VpcCleaner extends AwsCleaner<EC2, Vpc> {
     super((props) => new EC2(props), regions)
   }
 
-  protected getResourcesToClean = async (client: EC2): Promise<Vpc[]> =>
+  protected getResourcesToClean = async (
+    client: EC2,
+    region: string,
+  ): Promise<Vpc[]> =>
     this.paginate(
       paginateDescribeVpcs({ client }, {}),
       (response) => response.Vpcs!,

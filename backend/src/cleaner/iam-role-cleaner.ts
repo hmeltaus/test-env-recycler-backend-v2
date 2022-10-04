@@ -10,7 +10,10 @@ export class IamRoleCleaner extends AwsCleaner<IAM, Role> {
     super((props) => new IAM(props), regions)
   }
 
-  protected getResourcesToClean = async (client: IAM): Promise<Role[]> =>
+  protected getResourcesToClean = async (
+    client: IAM,
+    region: string,
+  ): Promise<Role[]> =>
     this.paginate(
       paginateListRoles({ client }, {}),
       (response) => response.Roles,

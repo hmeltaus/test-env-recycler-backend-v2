@@ -10,7 +10,10 @@ export class UserCleaner extends AwsCleaner<IAM, User> {
     super((props) => new IAM(props), regions)
   }
 
-  protected getResourcesToClean = async (client: IAM): Promise<User[]> =>
+  protected getResourcesToClean = async (
+    client: IAM,
+    region: string,
+  ): Promise<User[]> =>
     this.paginate(
       paginateListUsers({ client }, {}),
       (response) => response.Users!,

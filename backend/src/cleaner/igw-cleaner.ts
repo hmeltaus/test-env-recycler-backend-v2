@@ -16,6 +16,7 @@ export class IgwCleaner extends AwsCleaner<EC2, InternetGateway> {
 
   protected getResourcesToClean = async (
     client: EC2,
+    region: string,
   ): Promise<InternetGateway[]> =>
     this.paginate(
       paginateDescribeInternetGateways({ client }, {}),

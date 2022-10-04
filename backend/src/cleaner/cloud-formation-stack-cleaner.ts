@@ -38,6 +38,7 @@ export class CloudFormationStackCleaner extends AwsCleaner<
 
   protected getResourcesToClean = async (
     client: CloudFormation,
+    region: string,
   ): Promise<Stack[]> =>
     this.paginate(
       paginateDescribeStacks({ client }, {}),

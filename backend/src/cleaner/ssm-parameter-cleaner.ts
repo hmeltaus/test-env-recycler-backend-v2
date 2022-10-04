@@ -16,6 +16,7 @@ export class SsmParameterCleaner extends AwsCleaner<SSM, ParameterMetadata> {
 
   protected getResourcesToClean = async (
     client: SSM,
+    region: string,
   ): Promise<ParameterMetadata[]> =>
     this.paginate(
       paginateDescribeParameters({ client }, {}),

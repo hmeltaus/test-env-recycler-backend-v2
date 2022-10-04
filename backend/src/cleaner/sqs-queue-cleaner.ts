@@ -10,7 +10,10 @@ export class SqsQueueCleaner extends AwsCleaner<SQS, string> {
     super((props) => new SQS(props), regions)
   }
 
-  protected getResourcesToClean = async (client: SQS): Promise<string[]> =>
+  protected getResourcesToClean = async (
+    client: SQS,
+    region: string,
+  ): Promise<string[]> =>
     this.paginate(
       paginateListQueues({ client }, {}),
       (response) => response.QueueUrls!,

@@ -14,7 +14,10 @@ export class NetworkAclCleaner extends AwsCleaner<EC2, NetworkAcl> {
     super((props) => new EC2(props), regions)
   }
 
-  protected getResourcesToClean = async (client: EC2): Promise<NetworkAcl[]> =>
+  protected getResourcesToClean = async (
+    client: EC2,
+    region: string,
+  ): Promise<NetworkAcl[]> =>
     this.paginate(
       paginateDescribeNetworkAcls({ client }, {}),
       (response) => response.NetworkAcls!,

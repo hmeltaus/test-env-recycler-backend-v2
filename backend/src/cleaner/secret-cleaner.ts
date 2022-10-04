@@ -16,6 +16,7 @@ export class SecretCleaner extends AwsCleaner<SecretsManager, SecretListEntry> {
 
   protected getResourcesToClean = async (
     client: SecretsManager,
+    region: string,
   ): Promise<SecretListEntry[]> =>
     this.paginate(
       paginateListSecrets({ client }, {}),

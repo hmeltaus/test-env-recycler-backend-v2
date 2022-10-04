@@ -15,7 +15,10 @@ export class RouteTableCleaner extends AwsCleaner<EC2, RouteTable> {
     super((props) => new EC2(props), regions)
   }
 
-  protected getResourcesToClean = async (client: EC2): Promise<RouteTable[]> =>
+  protected getResourcesToClean = async (
+    client: EC2,
+    region: string,
+  ): Promise<RouteTable[]> =>
     this.paginate(
       paginateDescribeRouteTables({ client }, {}),
       (response) => response.RouteTables!,

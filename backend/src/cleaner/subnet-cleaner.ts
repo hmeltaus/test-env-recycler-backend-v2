@@ -11,7 +11,10 @@ export class SubnetCleaner extends AwsCleaner<EC2, Subnet> {
     super((props) => new EC2(props), regions)
   }
 
-  protected getResourcesToClean = async (client: EC2): Promise<Subnet[]> =>
+  protected getResourcesToClean = async (
+    client: EC2,
+    region: string,
+  ): Promise<Subnet[]> =>
     this.paginate(
       paginateDescribeSubnets({ client }, {}),
       (response) => response.Subnets!,

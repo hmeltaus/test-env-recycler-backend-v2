@@ -10,12 +10,15 @@ export class S3BucketCleaner extends AwsCleaner<S3, Bucket> {
     super((props) => new S3(props), regions)
   }
 
-  protected getResourcesToClean = async (client: S3): Promise<Bucket[]> =>
+  protected getResourcesToClean = async (
+    client: S3,
+    region: string,
+  ): Promise<Bucket[]> =>
     client
       .listBuckets({})
       .then((response) => response.Buckets!)
       .then(async (buckets) => {
-        console.log(`Found ${buckets.length}`)
+        console.log(`Found ${buckets.length} buckets from region ${region}`)
         buckets.forEach((b) => console.log(b.Name))
 
         const bucketsWithData = await Promise.all(
@@ -39,7 +42,7 @@ export class S3BucketCleaner extends AwsCleaner<S3, Bucket> {
             console.log(`Bucket '${bucket.Name}' location: ${location}`)
 
             const bucketRegion = location ?? "us-east-1"
-            if (bucketRegion !== client.config.region) {
+            if (bucketRegion !== region) {
               return {
                 bucket,
                 include: false,
@@ -70,18 +73,20 @@ export class S3BucketCleaner extends AwsCleaner<S3, Bucket> {
     client: S3,
     resource: Bucket,
   ): Promise<CleanResult> => {
-    this.paginate(
+    await this.paginate(
       paginateListObjectsV2({ client }, { Bucket: resource.Name }),
       (res) => res.Contents!.map((o) => o.Key!),
     ).then(async (objects) => {
-      for (const o of objects) {
-        await client.deleteObjects({
-          Bucket: resource.Name,
-          Delete: {
-            Objects: [{ Key: o }],
-          },
-        })
-      }
+      console.log(
+        `Delete ${objects.length} objects from bucket ${resource.Name}`,
+      )
+      const keys = objects.map((key) => ({ Key: key }))
+      await client.deleteObjects({
+        Bucket: resource.Name,
+        Delete: {
+          Objects: keys,
+        },
+      })
     })
 
     return client

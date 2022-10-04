@@ -93,7 +93,7 @@ export abstract class AwsCleaner<C, A> implements Cleaner {
       this.regions.map(async (region) => {
         console.log(`About to clean region ${region} of account ${account.id}`)
         const client = await this.getClient(account.id, region)
-        const resources = await this.getResourcesToClean(client)
+        const resources = await this.getResourcesToClean(client, region)
         console.log(
           `Found ${resources.length} resources of type ${this.resourceType} from region ${region}`,
         )
@@ -116,7 +116,10 @@ export abstract class AwsCleaner<C, A> implements Cleaner {
     return true
   }
 
-  protected abstract getResourcesToClean(client: C): Promise<A[]>
+  protected abstract getResourcesToClean(
+    client: C,
+    region: string,
+  ): Promise<A[]>
 
   protected abstract cleanResource(client: C, resource: A): Promise<CleanResult>
 

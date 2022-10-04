@@ -10,7 +10,10 @@ export class SnsTopicCleaner extends AwsCleaner<SNS, Topic> {
     super((props) => new SNS(props), regions)
   }
 
-  protected getResourcesToClean = async (client: SNS): Promise<Topic[]> =>
+  protected getResourcesToClean = async (
+    client: SNS,
+    region: string,
+  ): Promise<Topic[]> =>
     this.paginate(
       paginateListTopics({ client }, {}),
       (response) => response.Topics!,
