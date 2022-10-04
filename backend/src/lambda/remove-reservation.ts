@@ -1,5 +1,6 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda"
 import { accountsDb } from "../db/accounts-db"
+import { eventsDb } from "../db/events-db"
 import { Reservation } from "../db/model"
 import { reservationsDb } from "../db/reservations-db"
 import { queues } from "../queue/sqs"
@@ -21,6 +22,15 @@ export const removeReservation = async (
   console.log(`Reservation ${id} has ${accounts.length} accounts`)
   await Promise.all(
     accounts.map((account) => accountsDb.markAccountAsDirty(account.id)),
+  )
+
+  await Promise.all(
+    accounts.map((account) =>
+      eventsDb.put({
+        accountId: account.id,
+        message: "status changed to dirty",
+      }),
+    ),
   )
 
   await Promise.all(

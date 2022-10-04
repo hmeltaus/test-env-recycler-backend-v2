@@ -6,6 +6,7 @@ import {
 } from "aws-lambda"
 import { CleanerRegistry } from "../cleaner/cleaner-registry"
 import { accountsDb } from "../db/accounts-db"
+import { eventsDb } from "../db/events-db"
 import { CleanAccountItem } from "../queue/model"
 
 const registry = new CleanerRegistry()
@@ -28,6 +29,10 @@ const processRecord = async (record: SQSRecord): Promise<boolean> => {
 
     console.log(`Account ${item.accountId} found`)
     await accountsDb.markAccountAsInCleaning(account.id)
+    await eventsDb.put({
+      accountId: account.id,
+      message: "status changed to in-cleaning",
+    })
 
     const cleaners = await registry.getCleaners()
 
@@ -42,6 +47,10 @@ const processRecord = async (record: SQSRecord): Promise<boolean> => {
     }
 
     await accountsDb.markAccountAsReady(account.id)
+    await eventsDb.put({
+      accountId: account.id,
+      message: "status changed to ready",
+    })
 
     console.log(`Account ${item.accountId} cleaned`)
 

@@ -16,7 +16,11 @@ import * as logs from "aws-cdk-lib/aws-logs"
 import * as sqs from "aws-cdk-lib/aws-sqs"
 import { Construct } from "constructs"
 import * as path from "path"
-import { ACCOUNTS_TABLE_NAME, RESERVATIONS_TABLE_NAME } from "../src/db/common"
+import {
+  ACCOUNTS_TABLE_NAME,
+  EVENTS_TABLE_NAME,
+  RESERVATIONS_TABLE_NAME,
+} from "../src/db/common"
 
 export class TestEnvBackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -109,6 +113,23 @@ export class TestEnvBackendStack extends cdk.Stack {
         type: AttributeType.STRING,
         name: "id",
       },
+    })
+
+    const eventsTable = new dynamodb.Table(this, "events-table", {
+      billingMode: BillingMode.PAY_PER_REQUEST,
+      tableName: EVENTS_TABLE_NAME,
+      partitionKey: {
+        type: AttributeType.STRING,
+        name: "accountId",
+      },
+      sortKey: { type: AttributeType.NUMBER, name: "timestamp" },
+      timeToLiveAttribute: "ttl",
+    })
+
+    eventsTable.addGlobalSecondaryIndex({
+      indexName: "reservation",
+      partitionKey: { type: AttributeType.STRING, name: "reservationId" },
+      sortKey: { type: AttributeType.NUMBER, name: "timestamp" },
     })
 
     const createReservationFn = new NodejsFunction(this, "create-reservation", {
@@ -338,6 +359,11 @@ export class TestEnvBackendStack extends cdk.Stack {
     accountsTable.grantReadWriteData(handleOrphanAccountsFn)
     accountsTable.grantReadWriteData(cleanJammedAccountsFn)
     accountsTable.grantReadData(getReservationFn)
+
+    eventsTable.grantReadWriteData(cleanAccountFn)
+    eventsTable.grantReadWriteData(cleanJammedAccountsFn)
+    eventsTable.grantReadWriteData(handleOrphanAccountsFn)
+    eventsTable.grantReadWriteData(removeReservationFn)
 
     reserveAccountsQueue.grantSendMessages(createReservationFn)
     reserveAccountsQueue.grantConsumeMessages(reserveAccountsFn)

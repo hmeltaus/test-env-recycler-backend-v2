@@ -1,5 +1,6 @@
 import { ScheduledHandler } from "aws-lambda"
 import { accountsDb } from "../db/accounts-db"
+import { eventsDb } from "../db/events-db"
 import { queues } from "../queue/sqs"
 
 const maxInProgressTimeInMillis = 1000 * 60 * 30 // 60 minutes
@@ -15,6 +16,14 @@ export const handler: ScheduledHandler = async (): Promise<void> => {
     console.log(`Detected jammed account ${account.id}`)
     await Promise.all(
       accounts.map((account) => accountsDb.markAccountAsDirty(account.id)),
+    )
+    await Promise.all(
+      accounts.map((account) =>
+        eventsDb.put({
+          accountId: account.id,
+          message: "status changed to dirty",
+        }),
+      ),
     )
 
     await Promise.all(

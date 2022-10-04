@@ -7,6 +7,7 @@ import {
 import * as lodash from "lodash"
 import { v4 } from "uuid"
 import { accountsDb } from "../db/accounts-db"
+import { eventsDb } from "../db/events-db"
 import { reservationsDb } from "../db/reservations-db"
 import { ReserveAccountItem } from "../queue/model"
 import { queues } from "../queue/sqs"
@@ -97,6 +98,10 @@ const processRecord = async (record: SQSRecord): Promise<boolean> => {
 
       if (success) {
         toReserveCount--
+        await eventsDb.put({
+          accountId: account.id,
+          message: `status changed to reserved for reservation ${reservation.id}`,
+        })
       }
 
       await randomSleep(1000)
