@@ -1,14 +1,14 @@
 import { ScheduledHandler } from "aws-lambda"
+import { RESERVATION_MAX_AGE_IN_MILLIS } from "../contants"
 import { reservationsDb } from "../db/reservations-db"
 import { removeReservation } from "./remove-reservation"
-
-const reservationMaxAgeInMillis = 1000 * 60 * 30 // 30 minutes
 
 export const handler: ScheduledHandler = async (): Promise<void> => {
   const now = Date.now()
   const reservations = await reservationsDb.list()
   const expiredReservations = reservations.filter(
-    (reservation) => reservation.timestamp + reservationMaxAgeInMillis < now,
+    (reservation) =>
+      reservation.timestamp + RESERVATION_MAX_AGE_IN_MILLIS < now,
   )
 
   for (const reservation of expiredReservations) {

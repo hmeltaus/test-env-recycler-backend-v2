@@ -6,14 +6,13 @@ import {
 } from "aws-lambda"
 import * as lodash from "lodash"
 import { v4 } from "uuid"
+import { RESERVATION_MAX_AGE_IN_MILLIS } from "../contants"
 import { accountsDb } from "../db/accounts-db"
 import { eventsDb } from "../db/events-db"
 import { reservationsDb } from "../db/reservations-db"
 import { ReserveAccountItem } from "../queue/model"
 import { queues } from "../queue/sqs"
 import { randomSleep } from "../util"
-
-const RESERVATION_MAX_AGE_IN_MILLIS = 1000 * 60 * 10 // 10 minutes
 
 const processRecord = async (record: SQSRecord): Promise<boolean> => {
   const now = Date.now()

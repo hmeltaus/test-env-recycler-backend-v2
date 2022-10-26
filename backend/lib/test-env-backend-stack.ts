@@ -364,6 +364,7 @@ export class TestEnvBackendStack extends cdk.Stack {
     eventsTable.grantReadWriteData(cleanJammedAccountsFn)
     eventsTable.grantReadWriteData(handleOrphanAccountsFn)
     eventsTable.grantReadWriteData(removeReservationFn)
+    eventsTable.grantReadWriteData(reserveAccountsFn)
 
     reserveAccountsQueue.grantSendMessages(createReservationFn)
     reserveAccountsQueue.grantConsumeMessages(reserveAccountsFn)
